@@ -25,6 +25,13 @@ const mediaUploadConnectSrc = (() => {
     return "";
   }
 })();
+// intelli-verse-x fork: allow embedding Langfuse in the admin portal iframe.
+// Space-separated CSP source list, e.g. "'self' https://admin.intelli-verse-x.ai".
+// Evaluated at build time (next headers() are baked into the routes manifest),
+// so pass it as a Docker build arg. Defaults to upstream behaviour ('none').
+const frameAncestors =
+  process.env.LANGFUSE_ALLOWED_FRAME_ANCESTORS?.trim() || "'none'";
+
 const cspHeader = `
   default-src 'self' https://*.langfuse.com https://*.langfuse.dev https://*.posthog.com https://*.sentry.io;
   script-src 'self' 'unsafe-eval' 'unsafe-inline' https://*.langfuse.com https://*.langfuse.dev https://challenges.cloudflare.com https://*.sentry.io  https://static.cloudflareinsights.com https://*.stripe.com https://login.microsoftonline.com https://login.microsoft.com https://*.microsoftonline.com;
@@ -36,7 +43,7 @@ const cspHeader = `
   object-src 'none';
   base-uri 'self';
   form-action 'self' https://login.microsoftonline.com https://login.microsoft.com https://*.microsoftonline.com;
-  frame-ancestors 'none';
+  frame-ancestors ${frameAncestors};
   connect-src 'self' ${mediaUploadConnectSrc}https://*.langfuse.com https://*.langfuse.dev https://*.ingest.us.sentry.io https://*.sentry.io https://chat.uk.plain.com https://*.amazonaws.com https://*.blob.core.windows.net https://storage.googleapis.com https://prod-uk-services-attachm-attachmentsuploadbucket2-1l2e4906o2asm.s3.eu-west-2.amazonaws.com https://login.microsoftonline.com https://login.microsoft.com https://*.microsoftonline.com https://graph.microsoft.com;
   media-src 'self' https: http://localhost:*;
   ${env.LANGFUSE_CSP_ENFORCE_HTTPS === "true" ? "upgrade-insecure-requests; block-all-mixed-content;" : ""}
@@ -175,20 +182,27 @@ const nextConfig = {
           ...(env.SENTRY_CSP_REPORT_URI ? [reportToHeader] : []),
         ],
       },
-      {
-        source: "/:path*",
-        headers: [
-          {
-            key: "x-frame-options",
-            value: "SAMEORIGIN",
-          },
-        ],
-        // Disable x-frame-options on Hugging Face to allow for embedded use of Langfuse
-        missing: huggingFaceHosts.map((host) => ({
-          type: "host",
-          value: host,
-        })),
-      },
+      // intelli-verse-x fork: when custom frame ancestors are configured,
+      // omit X-Frame-Options entirely — CSP frame-ancestors governs framing
+      // and a stale SAMEORIGIN here would confuse older browsers.
+      ...(frameAncestors === "'none'"
+        ? [
+            {
+              source: "/:path*",
+              headers: [
+                {
+                  key: "x-frame-options",
+                  value: "SAMEORIGIN",
+                },
+              ],
+              // Disable x-frame-options on Hugging Face to allow for embedded use of Langfuse
+              missing: huggingFaceHosts.map((host) => ({
+                type: /** @type {"host"} */ ("host"),
+                value: host,
+              })),
+            },
+          ]
+        : []),
       // CSP header
       {
         source: "/:path((?!api).*)*",
