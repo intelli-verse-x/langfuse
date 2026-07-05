@@ -58,6 +58,12 @@ ENV NEXT_PUBLIC_SENTRY_DSN=$NEXT_PUBLIC_SENTRY_DSN
 ARG NEXT_PUBLIC_BASE_PATH
 ENV NEXT_PUBLIC_BASE_PATH=$NEXT_PUBLIC_BASE_PATH
 
+# intelli-verse-x fork: CSP frame-ancestors allowlist for embedding Langfuse
+# in the admin portal. Next.js bakes headers() into the routes manifest at
+# build time, so this must be a build arg (see web/next.config.mjs).
+ARG LANGFUSE_ALLOWED_FRAME_ANCESTORS
+ENV LANGFUSE_ALLOWED_FRAME_ANCESTORS=$LANGFUSE_ALLOWED_FRAME_ANCESTORS
+
 # Sentry already needs to be set on build time to upload sourcemaps
 # This must not be set for OSS releases as we would share our Sentry secret.
 ARG SENTRY_AUTH_TOKEN

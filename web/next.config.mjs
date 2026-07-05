@@ -10,6 +10,13 @@ import { env } from "./src/env.mjs";
  * CSP headers
  * img-src https to allow loading images from SSO providers
  */
+// intelli-verse-x fork: allow embedding Langfuse in the admin portal iframe.
+// Space-separated CSP source list, e.g. "'self' https://admin.intelli-verse-x.ai".
+// Evaluated at build time (next headers() are baked into the routes manifest),
+// so pass it as a Docker build arg. Defaults to upstream behaviour ('none').
+const frameAncestors =
+  process.env.LANGFUSE_ALLOWED_FRAME_ANCESTORS?.trim() || "'none'";
+
 const cspHeader = `
   default-src 'self' https://*.langfuse.com https://*.langfuse.dev https://*.posthog.com https://*.sentry.io wss://*.crisp.chat https://*.crisp.chat;
   script-src 'self' 'unsafe-eval' 'unsafe-inline' https://*.langfuse.com https://*.langfuse.dev https://client.crisp.chat https://settings.crisp.chat https://challenges.cloudflare.com https://*.sentry.io  https://static.cloudflareinsights.com https://*.stripe.com https://uptime.betterstack.com;
@@ -21,7 +28,7 @@ const cspHeader = `
   object-src 'none';
   base-uri 'self';
   form-action 'self';
-  frame-ancestors 'none';
+  frame-ancestors ${frameAncestors};
   connect-src 'self' https://*.langfuse.com https://*.langfuse.dev https://client.crisp.chat https://storage.crisp.chat wss://client.relay.crisp.chat wss://stream.relay.crisp.chat https://*.ingest.us.sentry.io https://uptime.betterstack.com;
   media-src 'self' https: http://localhost:* https://client.crisp.chat;
   ${env.LANGFUSE_CSP_ENFORCE_HTTPS === "true" ? "upgrade-insecure-requests; block-all-mixed-content;" : ""}
@@ -97,20 +104,27 @@ const nextConfig = {
           ...(env.SENTRY_CSP_REPORT_URI ? [reportToHeader] : []),
         ],
       },
-      {
-        source: "/:path*",
-        headers: [
-          {
-            key: "x-frame-options",
-            value: "SAMEORIGIN",
-          },
-        ],
-        // Disable x-frame-options on Hugging Face to allow for embedded use of Langfuse
-        missing: huggingFaceHosts.map((host) => ({
-          type: "host",
-          value: host,
-        })),
-      },
+      // intelli-verse-x fork: when custom frame ancestors are configured,
+      // omit X-Frame-Options entirely — CSP frame-ancestors governs framing
+      // and a stale SAMEORIGIN here would confuse older browsers.
+      ...(frameAncestors === "'none'"
+        ? [
+            {
+              source: "/:path*",
+              headers: [
+                {
+                  key: "x-frame-options",
+                  value: "SAMEORIGIN",
+                },
+              ],
+              // Disable x-frame-options on Hugging Face to allow for embedded use of Langfuse
+              missing: huggingFaceHosts.map((host) => ({
+                type: "host",
+                value: host,
+              })),
+            },
+          ]
+        : []),
       // CSP header
       {
         source: "/:path((?!api).*)*",
