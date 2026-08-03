@@ -231,6 +231,7 @@ export const env = createEnv({
     AUTH_COGNITO_CLIENT_ID: z.string().optional(),
     AUTH_COGNITO_CLIENT_SECRET: z.string().optional(),
     AUTH_COGNITO_ISSUER: z.url().optional(),
+    AUTH_COGNITO_ALLOWED_GROUPS: z.string().min(1).optional(),
     AUTH_COGNITO_ALLOW_ACCOUNT_LINKING: z.enum(["true", "false"]).optional(),
     AUTH_COGNITO_CLIENT_AUTH_METHOD: zAuthMethod,
     AUTH_COGNITO_CHECKS: zAuthChecks,
@@ -280,6 +281,7 @@ export const env = createEnv({
     AUTH_DOMAINS_WITH_SSO_ENFORCEMENT: z.string().optional(),
     AUTH_IGNORE_ACCOUNT_FIELDS: z.string().optional(),
     AUTH_DISABLE_USERNAME_PASSWORD: z.enum(["true", "false"]).optional(),
+    AUTH_DISABLE_CREDENTIAL_SIGNUP: z.enum(["true", "false"]).optional(),
     AUTH_DISABLE_SIGNUP: z.enum(["true", "false"]).optional(),
     AUTH_EMAIL_VERIFICATION_REQUIRED: z
       .enum(["true", "false"])
@@ -715,6 +717,7 @@ export const env = createEnv({
     AUTH_COGNITO_CLIENT_ID: process.env.AUTH_COGNITO_CLIENT_ID,
     AUTH_COGNITO_CLIENT_SECRET: process.env.AUTH_COGNITO_CLIENT_SECRET,
     AUTH_COGNITO_ISSUER: process.env.AUTH_COGNITO_ISSUER,
+    AUTH_COGNITO_ALLOWED_GROUPS: process.env.AUTH_COGNITO_ALLOWED_GROUPS,
     AUTH_COGNITO_ALLOW_ACCOUNT_LINKING:
       process.env.AUTH_COGNITO_ALLOW_ACCOUNT_LINKING,
     AUTH_COGNITO_CLIENT_AUTH_METHOD:
@@ -777,6 +780,8 @@ export const env = createEnv({
     AUTH_DOMAINS_WITH_SSO_ENFORCEMENT:
       process.env.AUTH_DOMAINS_WITH_SSO_ENFORCEMENT,
     AUTH_DISABLE_USERNAME_PASSWORD: process.env.AUTH_DISABLE_USERNAME_PASSWORD,
+    AUTH_DISABLE_CREDENTIAL_SIGNUP:
+      process.env.AUTH_DISABLE_CREDENTIAL_SIGNUP,
     AUTH_DISABLE_SIGNUP: process.env.AUTH_DISABLE_SIGNUP,
     AUTH_EMAIL_VERIFICATION_REQUIRED:
       process.env.AUTH_EMAIL_VERIFICATION_REQUIRED,
