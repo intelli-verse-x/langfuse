@@ -15,6 +15,10 @@ import { parseFlags } from "@/src/features/feature-flags/utils";
 import { env } from "@/src/env.mjs";
 import { createProjectMembershipsOnSignup } from "@/src/features/auth/lib/createProjectMembershipsOnSignup";
 import {
+  evaluateCognitoAdminAuthorization,
+  parseCognitoAllowedGroups,
+} from "@/src/server/cognitoAdminAuthorization";
+import {
   type AdapterUser,
   type Adapter,
   type AdapterAccount,
@@ -470,7 +474,8 @@ if (
 if (
   env.AUTH_COGNITO_CLIENT_ID &&
   env.AUTH_COGNITO_CLIENT_SECRET &&
-  env.AUTH_COGNITO_ISSUER
+  env.AUTH_COGNITO_ISSUER &&
+  env.AUTH_COGNITO_ALLOWED_GROUPS
 )
   staticProviders.push(
     CognitoProvider({
@@ -479,6 +484,9 @@ if (
       issuer: env.AUTH_COGNITO_ISSUER,
       allowDangerousEmailAccountLinking:
         env.AUTH_COGNITO_ALLOW_ACCOUNT_LINKING === "true",
+      authorization: {
+        params: { scope: "openid email profile" },
+      },
       client: {
         token_endpoint_auth_method: env.AUTH_COGNITO_CLIENT_AUTH_METHOD,
         ...(env.AUTH_COGNITO_ID_TOKEN_SIGNED_RESPONSE_ALG
@@ -947,6 +955,22 @@ export async function getAuthOptions(): Promise<NextAuthOptions> {
           if (z.email().safeParse(email).success === false) {
             logger.error("Invalid email found in user object");
             throw new Error("Invalid email found in user object");
+          }
+
+          if (account?.provider === "cognito") {
+            const decision = evaluateCognitoAdminAuthorization({
+              profile,
+              expectedIssuer: env.AUTH_COGNITO_ISSUER ?? "",
+              expectedAudience: env.AUTH_COGNITO_CLIENT_ID ?? "",
+              allowedGroups: parseCognitoAllowedGroups(
+                env.AUTH_COGNITO_ALLOWED_GROUPS,
+              ),
+            });
+            logger.info("Cognito authorization decision", {
+              subjectRef: decision.subjectRef,
+              outcome: decision.outcome,
+            });
+            if (!decision.allowed) return false;
           }
 
           span.setAttributes({
