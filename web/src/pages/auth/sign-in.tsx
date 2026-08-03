@@ -174,7 +174,9 @@ export const getServerSideProps: GetServerSideProps<PageProps> = async () => {
             : false,
         sso,
       },
-      signUpDisabled: env.AUTH_DISABLE_SIGNUP === "true",
+      signUpDisabled:
+        env.AUTH_DISABLE_SIGNUP === "true" ||
+        env.AUTH_DISABLE_CREDENTIAL_SIGNUP === "true",
       emailVerificationRequired: isEmailVerificationRequired(),
       runningOnHuggingFaceSpaces: env.NEXTAUTH_URL?.replace(
         "/api/auth",
