@@ -20,13 +20,12 @@ RUN rm -rf /usr/local/lib/node_modules/corepack \
             /root/.cache/node/corepack && \
     rm -f /usr/local/bin/corepack /usr/local/bin/yarn /usr/local/bin/yarnpkg
 
-FROM --platform=${BUILDPLATFORM} golang:1.26 AS migrate-builder
-ARG TARGETOS
-ARG TARGETARCH
+# Build on TARGETPLATFORM (not BUILDPLATFORM+GOOS/GOARCH cross-compile).
+# `go install` refuses cross-compilation when GOBIN is set, which broke
+# docker buildx --platform linux/amd64,linux/arm64 on arm64 hosts.
+FROM --platform=${TARGETPLATFORM:-linux/amd64} golang:1.26 AS migrate-builder
 ENV CGO_ENABLED=0 \
-    GOBIN=/out \
-    GOOS=${TARGETOS} \
-    GOARCH=${TARGETARCH}
+    GOBIN=/out
 # Build only the ClickHouse migrate CLI Langfuse uses at runtime.
 # compile this ourselves instead of downloading the upstream release
 # because prebuilt bins bundle many unused drivers and thus inherit CVEs
